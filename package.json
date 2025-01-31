@@ -7,7 +7,11 @@
     "lib": "lib"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "vite",
+    "build": "build_windows.bat && npm run build:scorm",
+    "build:scorm": "node scripts/build-scorm.js",
+    "preview": "vite preview"
   },
   "repository": {
     "type": "git",
@@ -24,6 +28,11 @@
   },
   "homepage": "https://github.com/zalo/mujoco_wasm#readme",
   "dependencies": {
-    "three": "^0.150.1"
+    "three": "^0.150.1",
+    "@rusticisoftware/scormcloud-api-v2-client-javascript": "^4.0.0"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0",
+    "jszip": "^3.10.1"
   }
 }

@@ -3,7 +3,7 @@ rem Follow the instructions here: https://emscripten.org/docs/getting_started/do
 
 call python src/parse_mjxmacro.py
 rmdir /s /q build
-call ../emsdk/emsdk activate latest
+call ../emsdk/emsdk activate 3.1.56
 mkdir build
 cd build
 call emcmake cmake ..

@@ -5,6 +5,12 @@ import { OrbitControls    } from '../node_modules/three/examples/jsm/controls/Or
 import { DragStateManager } from './utils/DragStateManager.js';
 import { setupGUI, downloadExampleScenesFolder, loadSceneFromURL, getPosition, getQuaternion, toMujocoPos, standardNormal } from './mujocoUtils.js';
 import   load_mujoco        from '../dist/mujoco_wasm.js';
+import { SCORMTracker     } from '../scorm/scorm-wrapper.js';
+
+// Track simulation time and interaction
+let startTime = Date.now();
+let lastInteractionTime = startTime;
+let hasInteracted = false;
 
 // Load the MuJoCo Module
 const mujoco = await load_mujoco();
@@ -15,9 +21,21 @@ mujoco.FS.mkdir('/working');
 mujoco.FS.mount(mujoco.MEMFS, { root: '.' }, '/working');
 mujoco.FS.writeFile("/working/" + initialScene, await(await fetch("./examples/scenes/" + initialScene)).text());
 
+// Track user interaction
+function updateInteraction() {
+    lastInteractionTime = Date.now();
+    if (!hasInteracted) {
+        hasInteracted = true;
+        SCORMTracker.trackProgress(0.1); // Initial interaction
+    }
+}
+
 export class MuJoCoDemo {
   constructor() {
     this.mujoco = mujoco;
+    
+    // Track initialization
+    SCORMTracker.trackProgress(0.05);
 
     // Load in the state from XML
     this.model      = new mujoco.Model("/working/" + initialScene);
@@ -70,6 +88,12 @@ export class MuJoCoDemo {
 
     window.addEventListener('resize', this.onWindowResize.bind(this));
 
+    // Track user interactions
+    window.addEventListener('mousemove', updateInteraction);
+    window.addEventListener('mousedown', updateInteraction);
+    window.addEventListener('keydown', updateInteraction);
+    window.addEventListener('wheel', updateInteraction);
+
     // Initialize the Drag State Manager.
     this.dragStateManager = new DragStateManager(this.scene, this.renderer, this.camera, this.container.parentElement, this.controls);
   }
@@ -94,6 +118,23 @@ export class MuJoCoDemo {
 
   render(timeMS) {
     this.controls.update();
+
+    // Track progress based on interaction time
+    if (hasInteracted) {
+        const timeSpent = (Date.now() - startTime) / 1000; // Convert to seconds
+        const timeSinceLastInteraction = (Date.now() - lastInteractionTime) / 1000;
+        
+        // Calculate progress (max 95% from time alone)
+        let progress = Math.min(0.95, timeSpent / 300); // 5 minutes = full progress
+        
+        // If no interaction for 5 minutes, consider complete
+        if (timeSinceLastInteraction > 300) {
+            progress = 1.0;
+            SCORMTracker.trackCompletion(true);
+        }
+        
+        SCORMTracker.trackProgress(progress);
+    }
 
     if (!this.params["paused"]) {
       let timestep = this.model.getOptions().timestep;
